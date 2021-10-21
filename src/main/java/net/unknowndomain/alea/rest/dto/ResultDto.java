@@ -15,12 +15,12 @@
  */
 package net.unknowndomain.alea.rest.dto;
 
+import net.unknowndomain.alea.command.PrintableOutput;
 import net.unknowndomain.alea.messages.MsgFilePart;
 import net.unknowndomain.alea.messages.MsgPart;
 import net.unknowndomain.alea.messages.MsgTextPart;
 import net.unknowndomain.alea.messages.MsgUrlPart;
 import net.unknowndomain.alea.messages.ReturnMsg;
-import net.unknowndomain.alea.roll.GenericResult;
 
 /**
  *
@@ -29,7 +29,7 @@ import net.unknowndomain.alea.roll.GenericResult;
 public class ResultDto
 {
     private String message;
-    private GenericResult results;
+    private PrintableOutput results;
     
     public ResultDto()
     {
@@ -42,9 +42,9 @@ public class ResultDto
         this.results = null;
     }
     
-    public ResultDto(GenericResult result)
+    public ResultDto(PrintableOutput result)
     {
-        this.message = msgToTxt(result.getMessage());
+        this.message = msgToTxt(result.buildMessage());
         this.results = result;
     }
     
@@ -81,12 +81,12 @@ public class ResultDto
         this.message = message;
     }
 
-    public GenericResult getResults()
+    public PrintableOutput getResults()
     {
         return results;
     }
 
-    public void setResults(GenericResult results)
+    public void setResults(PrintableOutput results)
     {
         this.results = results;
     }

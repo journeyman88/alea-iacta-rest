@@ -15,7 +15,7 @@
  */
 package net.unknowndomain.alea.rest.dto;
 
-import net.unknowndomain.alea.systems.RpgSystemOptions;
+import java.util.Map;
 
 /**
  *
@@ -26,7 +26,7 @@ public class AleaParams
     private String callerId;
     private String langId;
     private String expression;
-    private RpgSystemOptions systemOptions;
+    private Map<String,Object> systemOptions;
 
     public String getCallerId()
     {
@@ -48,12 +48,12 @@ public class AleaParams
         this.expression = expression;
     }
 
-    public RpgSystemOptions getSystemOptions()
+    public Map<String,Object> getSystemOptions()
     {
         return systemOptions;
     }
 
-    public void setSystemOptions(RpgSystemOptions systemOptions)
+    public void setSystemOptions(Map<String,Object> systemOptions)
     {
         this.systemOptions = systemOptions;
     }

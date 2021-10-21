@@ -1,5 +1,8 @@
 package net.unknowndomain.alea.rest;
 
+import com.fasterxml.uuid.EthernetAddress;
+import com.fasterxml.uuid.Generators;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -9,9 +12,10 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import net.unknowndomain.alea.command.PrintableOutput;
 import net.unknowndomain.alea.expr.ExpressionCommand;
-import net.unknowndomain.alea.messages.ReturnMsg;
 import net.unknowndomain.alea.roll.GenericResult;
 import net.unknowndomain.alea.systems.RpgSystemCommand;
 import net.unknowndomain.alea.rest.dto.AleaParams;
@@ -19,11 +23,17 @@ import net.unknowndomain.alea.rest.dto.CommandDto;
 import net.unknowndomain.alea.rest.dto.ResultDto;
 import net.unknowndomain.alea.rest.dto.ServiceDesc;
 import net.unknowndomain.alea.rest.dto.SystemDto;
+import net.unknowndomain.alea.rest.dto.SystemParam;
+import net.unknowndomain.alea.systems.RpgSystemOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Path("/alea")
 public class AleaService {
     
     private static final ServiceDesc SERVICE_DESC;
+    private static final UUID NAMESPACE = Generators.timeBasedGenerator(EthernetAddress.fromInterface()).generate();
+    private static final Logger LOGGER = LoggerFactory.getLogger(AleaService.class);
     
     static {
         ServiceDesc temp = new ServiceDesc();
@@ -57,10 +67,46 @@ public class AleaService {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ResultDto expressionSolve(AleaParams params) {
+        ResultDto retVal;
         Optional<UUID> callerId = parseCallerId(params);
         ExpressionCommand expr = new ExpressionCommand();
-        ReturnMsg msg = expr.execCommand("expr " + params.getExpression(), callerId);
-        return new ResultDto(msg);
+        Optional<PrintableOutput> out = expr.execCommand("expr " + params.getExpression(), callerId);
+        if (out.isPresent())
+        {
+            retVal = new ResultDto(out.get());
+        }
+        else
+        {
+            retVal = new ResultDto(expr.printHelp(Locale.ENGLISH));
+        }
+        return retVal;
+    }
+    
+    @GET
+    @Path("/{systemId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<SystemParam> systemParams(@PathParam("systemId") String systemId, @QueryParam("langId") String langId) {
+        
+        Optional<RpgSystemCommand> foundCmd = Optional.empty();
+        Optional<Locale> lang = parseLang(langId);
+        for (RpgSystemCommand cmd : RpgSystemCommand.LOADER)
+        {
+            if (cmd.getCommandDesc().getCommand().equals(systemId))
+            {
+                foundCmd = Optional.of(cmd);
+            }
+        }
+        if (foundCmd.isPresent())
+        {
+            RpgSystemCommand cmd = foundCmd.get();
+            RpgSystemOptions opt = cmd.buildOptions();
+            if (lang.isPresent())
+            {
+                return SystemParser.exportOptions(opt, lang.get());
+            }
+            return SystemParser.exportOptions(opt);
+        }
+        return null;
     }
     
     @POST
@@ -81,7 +127,17 @@ public class AleaService {
         if (foundCmd.isPresent())
         {
             RpgSystemCommand cmd = foundCmd.get();
-            result = cmd.execCommand(params.getSystemOptions(), parseCallerId(params));
+            RpgSystemOptions opt = cmd.buildOptions();
+            SystemParser.parseOptions(opt, params.getSystemOptions());
+            Optional<Locale> lang = parseLang(params);
+            if (lang.isPresent())
+            {
+                result = cmd.execCommand(opt, lang.get(), parseCallerId(params));
+            }
+            else
+            {
+                result = cmd.execCommand(opt, parseCallerId(params));
+            }
         }
         if (result.isPresent())
         {
@@ -92,8 +148,24 @@ public class AleaService {
     
     private Optional<UUID> parseCallerId(AleaParams params)
     {
-        UUID uuid = UUID.fromString(params.getCallerId());
+        UUID uuid = Generators.nameBasedGenerator(NAMESPACE).generate(params.getCallerId());
         Optional<UUID> callerId = Optional.ofNullable(uuid);
         return callerId;
+    }
+    
+    private Optional<Locale> parseLang(AleaParams params)
+    {
+        return parseLang(params.getLangId());
+    }
+    
+    private Optional<Locale> parseLang(String langId)
+    {
+        Optional<Locale> lang = Optional.empty();
+        if ((langId != null) && (!langId.isEmpty()))
+        {
+            Locale l = new Locale(langId);
+            lang = Optional.ofNullable(l);
+        }
+        return lang;
     }
 }
