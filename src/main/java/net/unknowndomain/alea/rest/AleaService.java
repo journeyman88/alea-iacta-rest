@@ -126,17 +126,23 @@ public class AleaService {
         }
         if (foundCmd.isPresent())
         {
+            Optional<Locale> lang = parseLang(params);
             RpgSystemCommand cmd = foundCmd.get();
             RpgSystemOptions opt = cmd.buildOptions();
-            SystemParser.parseOptions(opt, params.getSystemOptions());
-            Optional<Locale> lang = parseLang(params);
-            if (lang.isPresent())
+            if ((params.getSystemOptions() != null) && (!params.getSystemOptions().isEmpty()))
             {
-                result = cmd.execCommand(opt, lang.get(), parseCallerId(params));
-            }
-            else
-            {
-                result = cmd.execCommand(opt, parseCallerId(params));
+                SystemParser.parseOptions(opt, params.getSystemOptions());
+                if (opt.isValid())
+                {
+                    if (lang.isPresent())
+                    {
+                        result = cmd.execCommand(opt, lang.get(), parseCallerId(params));
+                    }
+                    else
+                    {
+                        result = cmd.execCommand(opt, parseCallerId(params));
+                    }
+                }
             }
         }
         if (result.isPresent())
